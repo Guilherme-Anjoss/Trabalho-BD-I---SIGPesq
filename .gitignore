@@ -1,0 +1,24 @@
+# Variáveis de ambiente e senhas locais
+.env
+
+# Build do Maven e binários do Java
+target/
+*.class
+*.jar
+*.war
+
+# Dados de volume local do Docker (caso mapeie pasta local)
+mysql_data/
+
+# Arquivos de IDEs e editores
+.idea/
+*.iml
+.vscode/
+.settings/
+.project
+.classpath
+
+# Arquivos temporários do sistema
+.DS_Store
+Thumbs.db
+*~
