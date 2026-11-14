@@ -1,5 +1,5 @@
 -- ========================================================================= --
--- SIGPesq - Sistema de Gerenciamento de Projetos de Pesquisa Universitarias --
+-- SIGPesq - Sistema de Gerenciamento de Projetos de Pesquisa Universitarios --
 -- ========================================================================= --
 
 SET NAMES utf8mb4;
@@ -14,9 +14,9 @@ USE sigpesq;
 -- 1. TABELAS SEM DEPENDENCIAS --
 -- =========================== --
 
--- ------------------------------
--- AGENCIA_FOMENTO
--- ------------------------------
+-- --------------- --
+-- AGENCIA_FOMENTO --
+-- --------------- --
 CREATE TABLE agencia_fomento (
     id_agencia      INT AUTO_INCREMENT PRIMARY KEY,
     nome            VARCHAR(150)    NOT NULL,
@@ -25,9 +25,9 @@ CREATE TABLE agencia_fomento (
     CONSTRAINT uq_agencia_sigla UNIQUE (sigla)
 ) ENGINE = InnoDB;
 
--- ------------------------------
--- TIPO_PRODUCAO
--- ------------------------------
+-- ------------- --
+-- TIPO_PRODUCAO --
+-- ------------- --
 CREATE TABLE tipo_producao (
     id_tipo_producao INT AUTO_INCREMENT PRIMARY KEY,
     nome            VARCHAR(100)    NOT NULL,
@@ -35,9 +35,9 @@ CREATE TABLE tipo_producao (
     CONSTRAINT uq_tipo_producao_nome UNIQUE (nome)
 ) ENGINE = InnoDB;
 
--- ------------------------------
--- PARTICIPANTE
--- ------------------------------
+-- ------------ --
+-- PARTICIPANTE --
+-- ------------ --
 CREATE TABLE participante (
     id_participante     INT AUTO_INCREMENT PRIMARY KEY,
     tipo                VARCHAR(20)     NOT NULL,
@@ -48,16 +48,16 @@ CREATE TABLE participante (
     CONSTRAINT uq_participante_cpf   UNIQUE (cpf),                 -- RN-09
     CONSTRAINT uq_participante_email UNIQUE (email_institucional), -- RN-14
     CONSTRAINT ck_participante_tipo  CHECK (tipo IN ('Docente', 'Discente', 'Tecnico')),
-    CONSTRAINT ck_participante_cpf   CHECK (cpf REGEXP '^[0-9]{11}$')
+    CONSTRAINT ck_participante_cpf   CHECK (cpf REGEXP '^[0-9]{11}$') -- 11 digitos, sem pontuacao
 ) ENGINE = InnoDB;
 
 -- ===================================== --
 -- 2. TABELAS COM DEPENDENCIA DE 1 NIVEL --
 -- ===================================== --
 
--- ------------------------------
--- FINANCIAMENTO
--- ------------------------------
+-- ------------- --
+-- FINANCIAMENTO --
+-- ------------- --
 CREATE TABLE financiamento (
     id_financiamento INT AUTO_INCREMENT PRIMARY KEY,
     id_agencia      INT             NOT NULL,
@@ -69,16 +69,16 @@ CREATE TABLE financiamento (
     CONSTRAINT fk_financiamento_agencia FOREIGN KEY (id_agencia)
         REFERENCES agencia_fomento (id_agencia)
         ON UPDATE CASCADE ON DELETE RESTRICT,
-    CONSTRAINT ck_financiamento_vigencia CHECK (fim_vigencia > inicio_vigencia),
+    CONSTRAINT ck_financiamento_vigencia CHECK (fim_vigencia > inicio_vigencia), -- RN-12
     CONSTRAINT ck_financiamento_valor    CHECK (valor_total > 0)
 ) ENGINE = InnoDB;
 
--- -------------------------------
--- PROJETO_PESQUISA  
--- -------------------------------
+-- ---------------- --
+-- PROJETO_PESQUISA --
+-- ---------------- --
 CREATE TABLE projeto_pesquisa (
     codigo          VARCHAR(20)     PRIMARY KEY,              -- RN-04
-    id_coordenador  INT             NOT NULL,                 -- RN-01
+    id_coordenador  INT             NOT NULL,                 -- RN-01 
     titulo          VARCHAR(200)    NOT NULL,
     descricao       TEXT            NOT NULL,                 -- RF-01
     data_inicio     DATE            NOT NULL,
@@ -96,9 +96,9 @@ CREATE TABLE projeto_pesquisa (
 -- 3. TABELAS COM DEPENDENCIA DE 2 NIVEIS --
 -- ====================================== --
 
--- --------------------------------
--- PRODUCAO_CIENTIFICA
--- --------------------------------
+-- ------------------- --
+-- PRODUCAO_CIENTIFICA --
+-- ------------------- --
 CREATE TABLE producao_cientifica (
     id_producao     INT AUTO_INCREMENT PRIMARY KEY,
     codigo_projeto  VARCHAR(20)     NOT NULL,
@@ -115,9 +115,9 @@ CREATE TABLE producao_cientifica (
     CONSTRAINT ck_producao_ano CHECK (ano_publicacao BETWEEN 1900 AND 2100)
 ) ENGINE = InnoDB;
 
--- ---------------------------------
--- VINCULO_PARTICIPACAO 
--- ---------------------------------
+-- -------------------- --
+-- VINCULO_PARTICIPACAO --
+-- -------------------- --
 CREATE TABLE vinculo_participacao (
     id_vinculo      INT AUTO_INCREMENT PRIMARY KEY,
     id_participante INT             NOT NULL,
@@ -125,6 +125,7 @@ CREATE TABLE vinculo_participacao (
     funcao          VARCHAR(40)     NOT NULL,
     data_entrada    DATE            NOT NULL,
     data_saida      DATE            NULL,
+
     vinculo_aberto  TINYINT GENERATED ALWAYS AS (IF(data_saida IS NULL, 1, NULL)) VIRTUAL,
     CONSTRAINT fk_vinculo_participante FOREIGN KEY (id_participante)
         REFERENCES participante (id_participante)
@@ -136,9 +137,9 @@ CREATE TABLE vinculo_participacao (
     CONSTRAINT uq_vinculo_ativo UNIQUE (id_participante, codigo_projeto, funcao, vinculo_aberto) -- RN-19
 ) ENGINE = InnoDB;
 
--- ------------------------------
--- ALOCACAO_FINANCIAMENTO
--- ------------------------------
+-- ---------------------- --
+-- ALOCACAO_FINANCIAMENTO --
+-- ---------------------- --
 CREATE TABLE alocacao_financiamento (
     id_alocacao     INT AUTO_INCREMENT PRIMARY KEY,
     codigo_projeto  VARCHAR(20)     NOT NULL,
@@ -156,9 +157,9 @@ CREATE TABLE alocacao_financiamento (
     CONSTRAINT ck_alocacao_valor CHECK (valor_destinado > 0)
 ) ENGINE = InnoDB;
 
--- -------------------------------
--- AUTORIA
--- -------------------------------
+-- ------- --
+-- AUTORIA --
+-- ------- --
 CREATE TABLE autoria (
     id_producao     INT             NOT NULL,
     id_participante INT             NOT NULL,
@@ -178,14 +179,14 @@ CREATE TABLE autoria (
 CREATE INDEX idx_projeto_situacao ON projeto_pesquisa (situacao);
 CREATE INDEX idx_producao_ano     ON producao_cientifica (ano_publicacao);
 
--- =================================================================================== --
--- 5. TRIGGERS -- regras de negocio que comparam valores entre linhas ou entre tabelas -- 
--- =================================================================================== --
+-- =========== --
+-- 5. TRIGGERS --
+-- =========== --
 DELIMITER $$
 
--- ---------------------------------------------------------------------
--- RN-02: o coordenador principal de um projeto deve ser Docente
--- ---------------------------------------------------------------------
+-- ------------------------------------------------------------- --
+-- RN-02: o coordenador principal de um projeto deve ser Docente --
+-- ------------------------------------------------------------- --
 CREATE TRIGGER trg_projeto_coordenador_docente_ins
 BEFORE INSERT ON projeto_pesquisa
 FOR EACH ROW
@@ -210,7 +211,7 @@ BEGIN
     END IF;
 END$$
 
--- RN-02 : impede trocar o tipo de um Docente que ainda
+-- RN-02: impede trocar o tipo de um Docente que ainda
 -- coordena projetos (RF-18 permite editar o tipo do participante)
 CREATE TRIGGER trg_participante_tipo_upd
 BEFORE UPDATE ON participante
@@ -224,9 +225,12 @@ BEGIN
     END IF;
 END$$
 
--- ---------------------------------
--- RN-17 + regra do Coordenador:
--- ---------------------------------
+-- ---------------------------------------------------------------------
+-- RN-17 + regra do Coordenador (UC-03, passo 6):
+--  * o periodo do vinculo deve estar contido na vigencia do projeto;
+--  * se a funcao for 'Coordenador', o participante deve ser o
+--    coordenador principal do projeto.
+-- ---------------------------------------------------------------------
 CREATE TRIGGER trg_vinculo_regras_ins
 BEFORE INSERT ON vinculo_participacao
 FOR EACH ROW
@@ -273,9 +277,9 @@ BEGIN
     END IF;
 END$$
 
--- ---------------------------------------------------------------------------------
--- RN-18: o ano de publicacao nao pode ser anterior ao ano de inicio do projeto
--- ---------------------------------------------------------------------------------
+-- ---------------------------------------------------------------------------- --
+-- RN-18: o ano de publicacao nao pode ser anterior ao ano de inicio do projeto --
+-- ---------------------------------------------------------------------------- --
 CREATE TRIGGER trg_producao_ano_ins
 BEFORE INSERT ON producao_cientifica
 FOR EACH ROW
@@ -300,10 +304,10 @@ BEGIN
     END IF;
 END$$
 
--- ---------------------------------------------------------------------
--- RN-16: a soma dos valores destinados a um financiamento nao pode
--- ultrapassar o valor_total desse financiamento
--- ---------------------------------------------------------------------
+-- ---------------------------------------------------------------- --
+-- RN-16: a soma dos valores destinados a um financiamento nao pode --
+-- ultrapassar o valor_total desse financiamento                    --
+-- ---------------------------------------------------------------- --
 CREATE TRIGGER trg_alocacao_limite_ins
 BEFORE INSERT ON alocacao_financiamento
 FOR EACH ROW
@@ -334,7 +338,7 @@ BEGIN
     END IF;
 END$$
 
--- RN-16 : ao editar o financiamento (RF-19), o novo valor
+-- RN-16 (lado inverso): ao editar o financiamento (RF-19), o novo valor
 -- total nao pode ficar abaixo do que ja foi alocado aos projetos
 CREATE TRIGGER trg_financiamento_valor_upd
 BEFORE UPDATE ON financiamento
@@ -351,9 +355,9 @@ END$$
 
 DELIMITER ;
 
--- ======================= --
--- 6. TESTE DE DADOS       --
--- ======================= --
+-- ================= --
+-- 6. CARGA DE DADOS --
+-- ================= --
 
 -- Agencias de fomento
 INSERT INTO agencia_fomento (nome, sigla, ativo) VALUES
@@ -368,7 +372,7 @@ INSERT INTO tipo_producao (nome, ativo) VALUES
     ('Software', TRUE),
     ('Relatorio Tecnico', TRUE);
 
--- Participantes 
+-- Participantes
 INSERT INTO participante (tipo, nome, cpf, email_institucional, ativo) VALUES
     ('Docente',  'Ana Beatriz Souza',     '11122233344', 'ana.souza@ufnes.edu.br',      TRUE),
     ('Docente',  'Carlos Eduardo Lima',   '22233344455', 'carlos.lima@ufnes.edu.br',    TRUE),
@@ -381,7 +385,7 @@ INSERT INTO financiamento (id_agencia, tipo_fomento, inicio_vigencia, fim_vigenc
     (1, 'Bolsa',    '2025-01-01', '2026-12-31', 50000.00, TRUE),  -- CNPq
     (2, 'Auxilio',  '2025-06-01', '2026-05-31', 30000.00, TRUE);  -- FAPES
 
--- Projetos de pesquisa 
+-- Projetos de pesquisa
 INSERT INTO projeto_pesquisa (codigo, id_coordenador, titulo, descricao, data_inicio, data_termino, situacao, ativo) VALUES
     ('P001', 1, 'Monitoramento de Qualidade da Agua em Bacias Urbanas',
         'Avaliacao de parametros fisico-quimicos em cursos de agua da regiao metropolitana.',
@@ -401,10 +405,12 @@ INSERT INTO vinculo_participacao (id_participante, codigo_projeto, funcao, data_
     (3, 'P001', 'Bolsista',    '2025-02-15', NULL),   
     (3, 'P003', 'Colaborador', '2025-06-01', NULL),   
     (4, 'P001', 'Bolsista',    '2025-03-01', NULL),   
-    (4, 'P002', 'Bolsista',    '2025-04-01', NULL),   
+    (4, 'P002', 'Bolsista',    '2025-04-01', NULL),  
     (5, 'P002', 'Colaborador', '2025-03-15', '2025-12-31');
 
 -- Alocacoes de financiamento
+-- O financiamento 1 (CNPq, R$ 50.000,00) eh dividido entre P001 e P002:
+-- 20.000,00 + 30.000,00 = 50.000,00 (exatamente o limite -- RN-16)
 INSERT INTO alocacao_financiamento (codigo_projeto, id_financiamento, modalidade, valor_destinado) VALUES
     ('P001', 1, 'Parcial', 20000.00),
     ('P002', 1, 'Parcial', 30000.00),
@@ -419,8 +425,9 @@ INSERT INTO producao_cientifica (codigo_projeto, id_tipo_producao, titulo, ano_p
 
 -- Autoria das producoes
 INSERT INTO autoria (id_producao, id_participante, ordem_autoria) VALUES
-    (1, 1, 1), (1, 3, 2),          -- Ana Beatriz e Fernanda
-    (2, 1, 1), (2, 4, 2),          -- Ana Beatriz e Gabriel
-    (3, 4, 1), (3, 1, 2),          -- Gabriel e Ana Beatriz
-    (4, 2, 1), (4, 3, 2);          -- Carlos Eduardo e Fernanda
+    (1, 1, 1), (1, 3, 2),          
+    (2, 1, 1), (2, 4, 2),          
+    (3, 4, 1), (3, 1, 2),          
+    (4, 2, 1), (4, 3, 2);          
+
 
