@@ -62,6 +62,19 @@ public class ProjetoPesquisaDAO {
         }
     }
 
+    /** Atualiza a situacao do projeto ao longo do ciclo de vida (RF-02). O CHECK do banco garante RN-03. */
+    public void atualizarSituacao(String codigo, String situacao) {
+        String sql = "UPDATE projeto_pesquisa SET situacao = ? WHERE codigo = ?";
+        try (Connection con = DatabaseConnection.getConnection();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setString(1, situacao);
+            ps.setString(2, codigo);
+            if (ps.executeUpdate() == 0) throw new IllegalArgumentException("Projeto não encontrado.");
+        } catch (SQLException e) {
+            throw traduzir(e);
+        }
+    }
+
     /** Converte erros do MySQL em mensagens que o usuario entende. */
     private RuntimeException traduzir(SQLException e) {
         if ("45000".equals(e.getSQLState())) {            // SIGNAL dos triggers
